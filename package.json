@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "DeFi kit for collecting tokens data",
   "scripts": {
-    "mongo:start": "docker compose -f mongo/docker-compose.yaml up -d"
+    "mongo:start": "docker compose -f mongo/docker-compose.yaml up -d",
+    "raydium:start": "npx ts-node src/scripts/raydium.ts"
   },
   "author": "und3rd0gz",
   "license": "ISC",
