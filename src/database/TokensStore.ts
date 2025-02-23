@@ -23,7 +23,6 @@ export default class TokensStore extends MongoDatabaseClient {
 
     const insertResult = await collection.insertOne({
       ...storedToken,
-      addTime: Date.now(),
       lastUpdateTime: Date.now(),
       updatesCount: 0,
     });

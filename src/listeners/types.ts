@@ -1,3 +1,5 @@
+import { DexData } from '../third-party-data/types';
+
 export enum RaydiumListenerEvents {
   NEW_LP = 'NEW_LP',
 }
@@ -32,6 +34,16 @@ export enum TokenSources {
   RAYDIUM = 'RAYDIUM',
 }
 
+export type TokenHolderInfo = {
+  address: string;
+  balance: number;
+};
+
+export type StoredTokenHolders = {
+  addTime: number;
+  tokenHolders: TokenHolderInfo[];
+};
+
 export type TokenInfo = {
   tokenAddress: string;
   symbol: string;
@@ -49,6 +61,9 @@ export type StoredToken = {
   lastUpdateTime: number;
   updatesCount: number;
   isIgnore: boolean;
+  holders: StoredTokenHolders[];
+  largestHolders: StoredTokenHolders[];
+  dexData: DexData[];
 };
 
 export type BalanceChange = {

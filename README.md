@@ -9,8 +9,8 @@
    - [mongo/mongo-init.js](mongo/mongo-init.js)
    - [mongo/docker-compose.yaml](mongo/docker-compose.yaml)
    - [src/database/constants.ts](src/database/constants.ts)
-   - [src/listeners//constants.ts](src/listeners//constants.ts)
-   - [src/scripts/raydium.ts](src/scripts/raydium.ts)
+   - [src/listeners/constants.ts](src/listeners/constants.ts)
+   - [src/scripts/constants.ts](src/scripts/constants.ts)
 
 2. Launch db: `npm run mongo:start`
 
@@ -19,7 +19,6 @@
 ### Features
 
 - [x] Collect token data
-- [ ] (processing) Store and export token data
-- [ ] Collect info about largest accounts
-- [ ] Collect info about dev
-- [ ] Accumulate full token data for training
+- [x] Store and export token data
+- [x] Collect info about largest accounts
+- [x] Accumulate full token data for training

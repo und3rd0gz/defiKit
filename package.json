@@ -4,7 +4,7 @@
   "description": "DeFi kit for collecting tokens data",
   "scripts": {
     "mongo:start": "docker compose -f mongo/docker-compose.yaml up -d",
-    "raydium:start": "npx ts-node src/scripts/raydium.ts"
+    "raydium:start": "npx ts-node -r dotenv/config src/scripts/raydium.ts"
   },
   "author": "und3rd0gz",
   "license": "ISC",
@@ -15,9 +15,11 @@
     "@raydium-io/raydium-sdk": "^1.3.1-beta.58",
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.98.0",
+    "@types/dotenv": "^8.2.3",
     "bn.js": "5.2.1",
     "bs58": "6.0.0",
     "chalk": "4",
+    "dotenv": "^16.4.7",
     "https-proxy-agent": "7.0.6",
     "humanize-duration": "3.32.1",
     "mongodb": "6.12.0",

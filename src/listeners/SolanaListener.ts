@@ -5,14 +5,15 @@ import {
   RpcResponseAndContext,
   TokenAmount,
 } from '@solana/web3.js';
-import { SOLANA_CONNECTION } from './constants';
+import { SOLANA_CONNECTION, TOKEN_PROGRAM_ID } from './constants';
 import { decimalToLamports } from './utils';
 import BN from 'bn.js';
 import { EventEmitter } from 'stream';
-import { SolanaListenerEvents, SolanaListeners, TokenInfo, TokenLP, TokenSources } from './types';
+import { BalanceChange, SolanaListeners, TokenHolderInfo, TokenInfo, TokenSources } from './types';
 import { unpackAccount } from '@solana/spl-token';
 import { Metaplex } from '@metaplex-foundation/js';
 import Logout from '../utils/Logout';
+import TokenHandler from '../database/TokenHandler';
 
 export default abstract class SolanaListener<T extends Record<keyof T, any[]>> extends EventEmitter<
   T | SolanaListeners
@@ -108,6 +109,40 @@ export default abstract class SolanaListener<T extends Record<keyof T, any[]>> e
     return tokenPrice;
   }
 
+  private async _getTokenHolders(
+    tokenAddress: string | PublicKey,
+    tokenDecimal: number
+  ): Promise<TokenHolderInfo[]> {
+    const token = this.toPublicKey(tokenAddress);
+
+    const TOKEN_ACC_SIZE = 165;
+
+    const accs = await this.connection.getProgramAccounts(TOKEN_PROGRAM_ID, {
+      dataSlice: { offset: 64, length: 8 },
+      filters: [{ dataSize: TOKEN_ACC_SIZE }, { memcmp: { offset: 0, bytes: token.toBase58() } }],
+    });
+
+    return accs.map((acc) => ({
+      address: acc.pubkey.toBase58(),
+      balance: new BN(acc.account.data.readBigInt64LE().toString())
+        .div(new BN(decimalToLamports(tokenDecimal)))
+        .toNumber(),
+    }));
+  }
+
+  private async _getLargestTokenHolders(
+    tokenAddress: string | PublicKey
+  ): Promise<TokenHolderInfo[]> {
+    const token = this.toPublicKey(tokenAddress);
+
+    const largestAccounts = await this.connection.getTokenLargestAccounts(token, 'confirmed');
+
+    return largestAccounts.value.map((account) => ({
+      address: account.address.toBase58(),
+      balance: account.uiAmount,
+    }));
+  }
+
   protected toPublicKey(address: string | PublicKey): PublicKey {
     return typeof address === 'string' ? new PublicKey(address) : address;
   }
@@ -133,37 +168,42 @@ export default abstract class SolanaListener<T extends Record<keyof T, any[]>> e
     return result;
   }
 
-  public monitorLiquidPoolChanges(tokenLP: TokenLP) {
-    const baseVault = this.toPublicKey(tokenLP.base.vaultAddress);
-    const quoteVault = this.toPublicKey(tokenLP.quote.vaultAddress);
+  public monitorLiquidPoolChanges(
+    tokenHandler: TokenHandler,
+    handler: (balanceChange: BalanceChange) => void
+  ) {
+    const baseVault = this.toPublicKey(tokenHandler.lp.base.vaultAddress);
+    const quoteVault = this.toPublicKey(tokenHandler.lp.quote.vaultAddress);
 
-    this.connection.onAccountChange(
+    const baseListener = this.connection.onAccountChange(
       baseVault,
       (accountInfo) => {
         const data = unpackAccount(baseVault, accountInfo);
 
-        this.emit(SolanaListenerEvents.ON_BALANCE_CHANGE, {
+        handler({
+          amount: new BN(data.amount as unknown as number).div(new BN(LAMPORTS_PER_SOL)).toNumber(),
           isBase: true,
-          // @ts-ignore
-          amount: new BN(data.amount).toNumber() / LAMPORTS_PER_SOL,
         });
       },
       { commitment: 'confirmed' }
     );
 
-    this.connection.onAccountChange(
+    const quoteListener = this.connection.onAccountChange(
       quoteVault,
       (accountInfo) => {
         const data = unpackAccount(quoteVault, accountInfo);
 
-        this.emit(SolanaListenerEvents.ON_BALANCE_CHANGE, {
-          isBase: true,
-          // @ts-ignore
-          amount: new BN(data.amount).toNumber() / LAMPORTS_PER_SOL,
+        handler({
+          amount: new BN(data.amount as unknown as number)
+            .div(new BN(decimalToLamports(tokenHandler.lp.quote.decimal)))
+            .toNumber(),
+          isBase: false,
         });
       },
       { commitment: 'confirmed' }
     );
+
+    tokenHandler.onAccountChangeListeners.push(baseListener, quoteListener);
   }
 
   public removeSolanaListeners() {
@@ -172,8 +212,28 @@ export default abstract class SolanaListener<T extends Record<keyof T, any[]>> e
     });
   }
 
+  public async removeTokenHandlerListeners(tokenHandler: TokenHandler) {
+    for (let i = 0; i < tokenHandler.onAccountChangeListeners.length; i += 1) {
+      await this.connection.removeAccountChangeListener(tokenHandler.onAccountChangeListeners[i]);
+    }
+
+    tokenHandler.onAccountChangeListeners = [];
+  }
+
   public async getTokenInfo(tokenAddress: string | PublicKey) {
     const result = await this._getTokenInfo(tokenAddress);
+
+    return result;
+  }
+
+  public async getTokenHolders(tokenAddress: string | PublicKey, tokenDecimal: number) {
+    const result = await this._getTokenHolders(tokenAddress, tokenDecimal);
+
+    return result;
+  }
+
+  public async getLargestTokenHolders(tokenAddress: string | PublicKey) {
+    const result = await this._getLargestTokenHolders(tokenAddress);
 
     return result;
   }

@@ -1,23 +1,51 @@
 import TokensStore from '../database/TokensStore';
 import RaydiumListener from '../listeners/RaydiumListener';
-import { RaydiumListenerEvents, SolanaListenerEvents } from '../listeners/types';
-import TokenHolder from './TokenHandler';
+import { RaydiumListenerEvents } from '../listeners/types';
+import TokenHandler from '../database/TokenHandler';
+import Logout from '../utils/Logout';
+import { tokenHandlerBalanceChangeLayer } from './tokenHandlerChangeLayers';
+import { stopListen } from './stopListen';
+import { setupTokenHandlerChanges } from './tokenHandlerChangesSetup';
+import SolanaListener from '../listeners/SolanaListener';
+import Dex from '../third-party-data/Dex';
 
 const tokensStore = new TokensStore();
+const dex = new Dex();
 const raydiumListener = new RaydiumListener();
 
+const tokens: TokenHandler[] = [];
+
+const stopListenInterval = async () => {
+  await stopListen(raydiumListener as SolanaListener<undefined>, tokens, tokensStore);
+
+  setTimeout(stopListenInterval, 0);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 (async () => {
+  Logout.yellow('Start...');
+
   raydiumListener.on(RaydiumListenerEvents.NEW_LP, async (tokenLP) => {
-    const tokenHolder = new TokenHolder();
+    Logout.purpleAccent('[S-Raydium]: New token = ', tokenLP.quote.address);
 
-    tokenHolder.addTime = Date.now();
+    const tokenHandler = new TokenHandler();
 
-    tokenHolder.info = await raydiumListener.getTokenInfo(tokenLP.quote.address);
+    tokenHandler.addTime = Date.now();
 
-    tokenHolder.lp = tokenLP;
+    tokenHandler.info = await raydiumListener.getTokenInfo(tokenLP.quote.address);
 
-    raydiumListener.on(SolanaListenerEvents.ON_BALANCE_CHANGE, (change) => {
-      tokenHolder.addVault(change.isBase, change.amount);
+    tokenHandler.lp = tokenLP;
+
+    raydiumListener.monitorLiquidPoolChanges(tokenHandler, (balanceChange) => {
+      tokenHandlerBalanceChangeLayer(tokenHandler, balanceChange);
     });
+
+    tokens.push(tokenHandler);
+
+    setupTokenHandlerChanges(raydiumListener as SolanaListener<undefined>, tokenHandler, dex);
   });
+
+  raydiumListener.monitorNewLp();
+
+  setTimeout(stopListenInterval, 0);
 })();

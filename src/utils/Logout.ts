@@ -2,7 +2,7 @@ import chalk from 'chalk';
 
 export default class Logout {
   private static filter(text: string[]) {
-    if (text.find((s) => `${s}`.indexOf(process.env.FILTER) !== -1)) {
+    if (text.find((s) => `${s}`.indexOf(process.env.LOG_FILTER?.trim() || '') !== -1)) {
       return true;
     }
 
@@ -63,6 +63,14 @@ export default class Logout {
     }
 
     console.log(`${description} ${chalk.red(accent)}`);
+  }
+
+  public static purpleAccent(description, accent) {
+    if (!this.filter([description, accent])) {
+      return;
+    }
+
+    console.log(`${description} ${Logout.getPurple(accent)}`);
   }
 
   public static getPurple(...text) {
