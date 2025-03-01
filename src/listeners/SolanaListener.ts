@@ -160,7 +160,7 @@ export default abstract class SolanaListener<T extends Record<keyof T, any[]>> e
   }
 
   /**
-   * @deprecated не работает так, как ожидается, при создании лп в самом Raydium - уже можно откопать vaults. См в класс {@link RaydiumListener}
+   * @deprecated doesn't work as expected, when creating LP in Raydium itself - vaults can already be found. See {@link RaydiumListener} class
    */
   public async findLiquidityPool(tokenAddress: string | PublicKey) {
     const result = await this._findLiquidityPool(tokenAddress);

@@ -71,7 +71,7 @@ export default class RaydiumListener extends SolanaListener<RaydiumListeners> {
   }
 
   /**
-   * @deprecated не работает так, как ожидается, при создании лп в самом Raydium - уже можно откопать vaults. См на то, что возвращается из {@link _parseNewLP}
+   * @deprecated doesn't work as expected, when creating LP in Raydium itself - vaults can already be found. See what is returned from {@link _parseNewLP}
    */
   protected async _findLiquidityPool(tokenAddress: string | PublicKey) {
     const [marketAccount] = await this.connection.getProgramAccounts(RAYDIUM_AMM_PROGRAM_ID, {

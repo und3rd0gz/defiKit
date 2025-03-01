@@ -1,10 +1,10 @@
-import { Collection, WithId } from 'mongodb';
+import { Collection, Filter, WithId } from 'mongodb';
 import { StoredToken } from '../listeners/types';
 import Logout from '../utils/Logout';
 import MongoDatabaseClient from './MongoDatabaseClient';
 
 export default class TokensStore extends MongoDatabaseClient {
-  private collection = 'tokensStore';
+  private collectionName = 'tokensStore';
 
   private async _addNewToken(collection: Collection<StoredToken>, storedToken: StoredToken) {
     Logout.yellowAccent('[Database]: Try to add new token', storedToken.info.tokenAddress);
@@ -80,17 +80,29 @@ export default class TokensStore extends MongoDatabaseClient {
     return tokens;
   }
 
+  private async _getToken(collection: Collection<StoredToken>, filters: Filter<StoredToken>) {
+    const token = collection.findOne(filters);
+
+    return token;
+  }
+
   public async addNewToken(storedToken: StoredToken) {
-    await this.executeInCollection(this.collection, this._addNewToken, storedToken);
+    await this.executeInCollection(this.collectionName, this._addNewToken, storedToken);
   }
 
   public async updateToken(storedToken: WithId<StoredToken>) {
-    await this.executeInCollection(this.collection, this._updateToken, storedToken);
+    await this.executeInCollection(this.collectionName, this._updateToken, storedToken);
   }
 
   public async getAllTokens() {
-    const tokens = this.executeInCollection(this.collection, this._getAllTokens);
+    const tokens = this.executeInCollection(this.collectionName, this._getAllTokens);
 
     return tokens;
+  }
+
+  public async getToken(filters: Filter<StoredToken>) {
+    const token = this.executeInCollection(this.collectionName, this._getToken, filters);
+
+    return token;
   }
 }
